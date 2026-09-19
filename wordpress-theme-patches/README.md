@@ -17,7 +17,7 @@
 | テーマ | `marketik_theme`（表示名「WordPress Theme」／制作会社のオリジナル） |
 | 有効なプラグイン | Advanced Custom Fields / Custom Post Type UI / WP File Manager |
 | 停止中のプラグイン | Akismet / CloudSecure WP Security / Hello Dolly / TypeSquare Webfonts |
-| SEOプラグイン | **なし**（Phase 2 で SEO SIMPLE PACK の追加を検討） |
+| SEOプラグイン | **All in One SEO (AIOSEO) Lite**（2026-09-19 導入） |
 | カスタム投稿タイプ | `works`（制作実績）、メンバー |
 | CSS | `assets/css/style.css` 単一ファイル（FLOCSS/BEM 命名） |
 
@@ -154,6 +154,7 @@ function is404_redirect() {
    初期カテゴリーを `ニュース` に変更
 7. コメント受付を停止。サンプル投稿 `Hello world!` を削除
 8. **SEOプラグインに All in One SEO (AIOSEO) Lite を導入**（後述）
+9. **Google Search Console を設定**（後述）
 
 ### AIOSEO 導入時の判断（2026-09-19）
 
@@ -191,6 +192,26 @@ function is404_redirect() {
 
 将来課金を検討する価値があるのは `ローカルSEO`（PRO）のみ。仙台のローカルSEO戦略と
 噛み合うが、Googleビジネスプロフィールで大半カバーできるため半年の運用後に判断する。
+
+### Google Search Console（2026-09-19 設定済み）
+
+| 項目 | 内容 |
+|---|---|
+| アカウント | `zakiyamaaa1235@gmail.com`（Googleビジネスプロフィールと同一。Workspaceは未導入） |
+| プロパティ種別 | URLプレフィックス `https://marketik.jp/` |
+| 所有権確認 | **HTMLタグ方式** |
+| サイトマップ | `sitemap.xml` 送信済み |
+
+**AIOSEOのOAuth連携は使っていない。** 管理画面内で統計を見る機能がPro限定のため、
+Googleアカウントの権限を渡す見返りがないと判断した。
+
+⚠️ **このバージョンのAIOSEOには Google Search Console 専用の認証コード入力欄が無い**
+（タイルを開いてもOAuthの接続パネルが出るだけ）。そのため
+**ウェブマスターツールタブ最下部の「その他の認証」欄に `<meta>` タグを丸ごと貼る**
+方式で通した。この欄は全ページの `<head>` に任意のタグを挿入できるので、
+今後 GA4 等のタグを入れる際もテーマを触らずここから追加できる。
+
+確認状態を維持するため、**この meta タグは削除しないこと。**
 
 ### 確定コピー（トップページ）
 
@@ -237,13 +258,8 @@ description:
 - `archive.php` … カテゴリ別一覧。`single-post.php` の「一覧へ戻る」の遷移先
 - サーバーパネルの「WordPressセキュリティ設定」に **REST APIアクセス制限**がないか
   （ONだと Claude 連携がブロックされる）
-- Google Search Console の設定（月次の効果測定に必要）
-  - AIOSEOのウィザード経由の接続は**しない**（管理画面内で統計を見る機能はPro限定で、
-    無料版ではOAuth権限を渡す割に得るものがない）
-  - Google公式で直接プロパティを作り、確認コードを
-    AIOSEO → 一般設定 → ウェブマスターツール に貼る方式で行う
-  - 使用アカウントは `zakiyamaaa1235@gmail.com`。Googleビジネスプロフィールを
-    既にこのアカウントで管理しているため集約を優先した。Google Workspaceは未導入
+- llms.txt を有効化（AI検索からの参照に備える。コストゼロ）
+- キャッチフレーズを「動画とマーケティングの力で、ビジネスを前進させる。」に設定
 - `works` の既存スラッグが日本語（例: `/works/仙台89ers-bプレミア開幕-.../`）。
   URLエンコードで長大化するがインデックス済みのため変更しない。
   **ブログ記事では必ず英語スラッグを使うこと**（自動化時のルールに組み込む）
