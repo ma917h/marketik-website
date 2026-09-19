@@ -72,7 +72,7 @@ function is404_redirect() {
 | `single-post.php` | テーマ直下 `single-post.php` を全置換 | 日付・サムネイルを動的化、「一覧へ戻る」のフォールバック追加 | **済（2026-09-19）** |
 | `parts-header.php` | `parts/parts-header.php` を全置換 | PC版グローバルナビに `Blog` を1行追加 | **済（2026-09-19）** |
 | `parts-drawer.php` | `parts/parts-drawer.php` を全置換 | スマホ用ドロワーに `Blog` を1行追加 | **済（2026-09-19）** |
-| `footer.php` | テーマ直下 `footer.php` を全置換 | フッターナビに `Blog` を1行追加 | 未 |
+| `footer.php` | テーマ直下 `footer.php` を全置換 | フッターナビに `Blog` を1行追加 | **済（2026-09-19）** |
 
 `Blog` の挿入位置はPC・スマホ・フッターとも `Company` の直前に揃えた。
 ナビは3箇所とも別ファイルにHTML直書きで、`wp_nav_menu` は使っていない。
@@ -145,6 +145,15 @@ function is404_redirect() {
 2. `home.php` 適用。記事一覧が制作実績と同じデザインで表示されることを確認
 3. `single-post.php` 適用。日付が固定値 `2023.10.01` から実際の投稿日に変わることを確認
 
+4. `parts-header.php` / `parts-drawer.php` / `footer.php` 適用。PC・スマホ・フッターの
+   3箇所すべてに `Blog` が出ることを確認
+5. **パーマリンクを「日付と投稿名」から「投稿名」へ変更。**
+   `/works/` の一覧・個別ページが無傷であることを実機で確認済み
+   （前方スラッグが変わらないため影響しない、という事前判断どおりの結果）
+6. カテゴリ `ニュース(news)` `ノウハウ(knowhow)` `実績・事例(case-study)` を作成。
+   初期カテゴリーを `ニュース` に変更
+7. コメント受付を停止。サンプル投稿 `Hello world!` を削除
+
 ### 判明した追加情報
 
 - **パーマリンク構造は「日付と投稿名」**（`/2026/04/12/hello-world/`）
@@ -161,6 +170,12 @@ function is404_redirect() {
 - `archive.php` … カテゴリ別一覧。`single-post.php` の「一覧へ戻る」の遷移先
 - サーバーパネルの「WordPressセキュリティ設定」に **REST APIアクセス制限**がないか
   （ONだと Claude 連携がブロックされる）
-- SEOプラグイン（SEO SIMPLE PACK など）の導入
-- サンプル投稿 `Hello world!` の削除、コメント受付の停止
-- カテゴリ作成（ニュース／ノウハウ／実績・事例）
+- SEOプラグイン（SEO SIMPLE PACK）の導入
+  - `header.php` に `<title>` の直書きは無く、`add_theme_support('title-tag')` 経由の
+    `wp_head()` 出力のみ。**タイトル二重出力の競合リスクは無い**と確認済み
+  - `header.php` に OGP・meta description が一切無い。現状サイト全ページで
+    SNSシェア時のカード表示が効いていない
+- Google Search Console の設定（月次の効果測定に必要）
+- `works` の既存スラッグが日本語（例: `/works/仙台89ers-bプレミア開幕-.../`）。
+  URLエンコードで長大化するがインデックス済みのため変更しない。
+  **ブログ記事では必ず英語スラッグを使うこと**（自動化時のルールに組み込む）
