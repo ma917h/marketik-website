@@ -71,11 +71,30 @@ function is404_redirect() {
 | `home.php` | テーマ直下 `home.php` を全置換 | 記事一覧を新規実装 | **済（2026-09-19）** |
 | `single-post.php` | テーマ直下 `single-post.php` を全置換 | 日付・サムネイルを動的化、「一覧へ戻る」のフォールバック追加 | **済（2026-09-19）** |
 | `parts-header.php` | `parts/parts-header.php` を全置換 | PC版グローバルナビに `Blog` を1行追加 | **済（2026-09-19）** |
-| `parts-drawer.php` | `parts/parts-drawer.php` を全置換 | スマホ用ドロワーに `Blog` を1行追加 | 未 |
+| `parts-drawer.php` | `parts/parts-drawer.php` を全置換 | スマホ用ドロワーに `Blog` を1行追加 | **済（2026-09-19）** |
+| `footer.php` | テーマ直下 `footer.php` を全置換 | フッターナビに `Blog` を1行追加 | 未 |
 
-`Blog` の挿入位置はPC・スマホとも `Company` の直前に揃えた。
-なお `Member` と `Works` の順序はPC版とスマホ版で元から入れ替わっているが、
-指示のない変更はしない方針によりそのままにしてある。
+`Blog` の挿入位置はPC・スマホ・フッターとも `Company` の直前に揃えた。
+ナビは3箇所とも別ファイルにHTML直書きで、`wp_nav_menu` は使っていない。
+項目の追加・削除は3ファイルすべてを直す必要がある。
+
+なお `Member` と `Works` の順序はPC版とスマホ版で元から入れ替わっており、
+フッターには `MVV` が無いなどの不揃いがあるが、指示のない変更はしない方針に
+よりそのままにしてある。
+
+| | HEADER(PC) | DRAWER(SP) | FOOTER |
+|---|---|---|---|
+| 1 | About Us | About | About Us |
+| 2 | Service | Service | Service |
+| 3 | MVV | MVV | Works |
+| 4 | Member | Works | Member |
+| 5 | Works | Member | **Blog** |
+| 6 | **Blog** | **Blog** | Company |
+| 7 | Company | Company | Contact |
+| 8 | Contact | Contact | Privacy Policy |
+
+`footer.php` は末尾に `wp_footer()` と `</body></html>` を含む。
+ここを落とすとJSが読み込まれずハンバーガーメニュー等が動かなくなるため注意。
 
 ### 検証方法
 
