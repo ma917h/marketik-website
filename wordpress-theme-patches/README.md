@@ -1,0 +1,109 @@
+# marketik.jp WordPressテーマ 差分パッチ
+
+> 作成日：2026-09-19
+> 対象：https://marketik.jp の本番WordPressテーマ `marketik_theme`
+
+このフォルダは **このNext.jsリポジトリのビルド対象ではありません。**
+本番のWordPressテーマに手で貼り付けるためのファイル置き場です。
+
+---
+
+## 本番環境の情報
+
+| 項目 | 値 |
+|------|-----|
+| ホスティング | エックスサーバー（`sv12067.xserver.jp`） |
+| WordPress | 7.1.1 |
+| テーマ | `marketik_theme`（表示名「WordPress Theme」／制作会社のオリジナル） |
+| 有効なプラグイン | Advanced Custom Fields / Custom Post Type UI / WP File Manager |
+| 停止中のプラグイン | Akismet / CloudSecure WP Security / Hello Dolly / TypeSquare Webfonts |
+| SEOプラグイン | **なし**（Phase 2 で SEO SIMPLE PACK の追加を検討） |
+| カスタム投稿タイプ | `works`（制作実績）、メンバー |
+| CSS | `assets/css/style.css` 単一ファイル（FLOCSS/BEM 命名） |
+
+---
+
+## 調査で判明した「ブログが無い」理由
+
+制作会社がブログ機能を **作りかけのまま納品** している。
+
+| ファイル / 設定 | 状態 |
+|---|---|
+| `home.php`（記事一覧） | **中身が空**。`get_header()` と `get_footer()` のみ |
+| `single-post.php`（記事個別） | ほぼ完成。ただし日付が `2023.10.01` 固定、サムネイルが `dummy.jpg` 固定 |
+| 設定 → 表示設定 → 投稿ページ | **未設定**（`— 選択 —`）。これが「ブログのタブが無い」直接原因 |
+| `functions.php` | `is_home()` のとき アーカイブタイトルを「ブログ」にする処理あり＝**ブログ運用は想定されていた** |
+
+補助的な事実：
+
+- `add_theme_support('post-thumbnails')` 済み → アイキャッチ画像は使える
+- `add_theme_support('title-tag')` 済み → titleタグは自動生成
+- `excerpt_length` = 80文字、`excerpt_more` = `...`
+- `archive-works.php` が `wp_pagenavi()` を呼ぶが **WP-PageNavi は未インストール**
+  → 本パッチではコア関数 `the_posts_pagination()` を使用
+- `parts-bread.php` が `bcn_display()` を呼ぶが **Breadcrumb NavXT は未インストール**
+  → パンくずは表示されない（`function_exists` で保護済みなのでエラーにはならない）
+
+### ⚠️ 404が全てトップへ301リダイレクトされる
+
+`functions.php` に以下があり、**存在しないURLは全てトップページへ301で飛ばされる**。
+
+```php
+add_action( 'template_redirect', 'is404_redirect' );
+function is404_redirect() {
+  if ( is_404() ) { wp_safe_redirect( home_url( '/' ), 301 ); exit(); }
+}
+```
+
+作業上の影響：
+
+1. ブログURLの設定ミスに気づきにくい（404ではなくトップが出る）
+2. **301はブラウザに強くキャッシュされる。** 設定前に該当URLを開くと、
+   設定後もトップに飛び続ける。検証はシークレットウィンドウで行うこと
+3. SEO的にはソフト404扱いで好ましくない（別途改善を提案する）
+
+---
+
+## 収録ファイル
+
+| ファイル | 貼り付け先 | 内容 |
+|---|---|---|
+| `home.php` | テーマ直下 `home.php` を全置換 | 記事一覧を新規実装 |
+| `single-post.php` | テーマ直下 `single-post.php` を全置換 | 日付・サムネイルを動的化、「一覧へ戻る」のフォールバック追加 |
+
+### 設計方針：CSSは1行も足さない
+
+`assets/css/style.css` はコンパイル済みの単一ファイルで、手編集は危険。
+そのため `home.php` は **`archive-works.php` と同じクラス名（`p-worksArchive__*`）を
+そのまま流用**している。新しいクラスを作らないので、CSSを触らずに
+制作実績一覧と同じ見た目が出る。
+
+本番のブログ運用が固まった段階で、`p-blogArchive__*` への分離を検討する。
+
+### home.php の主な実装判断
+
+- **メインクエリ（`have_posts()`）を使用。** `archive-works.php` のような
+  `new WP_Query` は使わない。`home.php` ではメインクエリがそのまま投稿一覧になり、
+  「表示設定 → アーカイブページに表示する最新の投稿数（10件）」とページ送りが正しく効く
+- 制作実績カードの「クライアント / 制作年」の位置に **投稿日**（`Y.m.d`）を表示
+- カテゴリを chip として表示
+- アイキャッチ未設定時は `assets/images/dummy-works.png` にフォールバック
+- ページ送りは `the_posts_pagination()`。`.p-pagenavi` でラップし、
+  テーマ側にCSSがあれば拾われるようにしてある
+
+---
+
+## 適用手順（要約）
+
+1. エックスサーバーの自動バックアップ（過去14日分）があることを確認
+2. **貼り付け前に、現在のファイル内容を全選択してテキストに退避**（即時ロールバック用）
+3. 外観 → テーマファイルエディター で対象ファイルを開き、全置換して「ファイルを更新」
+4. 固定ページ「Blog」を作成 → 設定 → 表示設定 → 投稿ページ に指定
+5. シークレットウィンドウで表示確認
+
+## 未着手 / 次の調査対象
+
+- `parts/parts-header.php` … グローバルメニューへの「Blog」追加方法の確定
+- `archive.php` … カテゴリ別一覧。`single-post.php` の「一覧へ戻る」の遷移先
+- サーバーパネルの「WordPressセキュリティ設定」に **REST APIアクセス制限**がないか
+  （ONだと Claude 連携がブロックされる）
