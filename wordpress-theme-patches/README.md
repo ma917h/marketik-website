@@ -70,7 +70,12 @@ function is404_redirect() {
 |---|---|---|---|
 | `home.php` | テーマ直下 `home.php` を全置換 | 記事一覧を新規実装 | **済（2026-09-19）** |
 | `single-post.php` | テーマ直下 `single-post.php` を全置換 | 日付・サムネイルを動的化、「一覧へ戻る」のフォールバック追加 | **済（2026-09-19）** |
-| `parts-header.php` | `parts/parts-header.php` を全置換 | PC版グローバルナビに `Blog` を1行追加 | 未 |
+| `parts-header.php` | `parts/parts-header.php` を全置換 | PC版グローバルナビに `Blog` を1行追加 | **済（2026-09-19）** |
+| `parts-drawer.php` | `parts/parts-drawer.php` を全置換 | スマホ用ドロワーに `Blog` を1行追加 | 未 |
+
+`Blog` の挿入位置はPC・スマホとも `Company` の直前に揃えた。
+なお `Member` と `Works` の順序はPC版とスマホ版で元から入れ替わっているが、
+指示のない変更はしない方針によりそのままにしてある。
 
 ### 検証方法
 
@@ -132,9 +137,8 @@ function is404_redirect() {
 
 ## 未着手 / 次の調査対象
 
-- `parts/parts-drawer.php` … **スマホ用メニュー。** ここにも `Blog` を追加しないと
-  スマホからブログに到達できない
-- `footer.php`（または `parts` 配下） … フッターナビへの `Blog` 追加
+- `footer.php`（または `parts` 配下） … フッターナビへの `Blog` 追加。
+  フッターは `About Us / Service / Works / Member / Company / Contact / Privacy Policy`
 - `archive.php` … カテゴリ別一覧。`single-post.php` の「一覧へ戻る」の遷移先
 - サーバーパネルの「WordPressセキュリティ設定」に **REST APIアクセス制限**がないか
   （ONだと Claude 連携がブロックされる）
