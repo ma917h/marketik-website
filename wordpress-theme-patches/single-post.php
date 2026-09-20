@@ -9,9 +9,11 @@
 					<?php the_title() ?>
 				</h1>
 			</div>
+			<?php if ( has_post_thumbnail() ) : ?>
 			<div class="p-post__thumbnail">
-				<img src="<?php echo esc_url( get_the_post_thumbnail_url( get_the_ID(), 'large' ) ?: get_template_directory_uri() . '/assets/images/dummy-works.png' ); ?>" alt="<?php echo esc_attr( get_the_title() ); ?>">
+				<img src="<?php echo esc_url( get_the_post_thumbnail_url( get_the_ID(), 'large' ) ); ?>" alt="<?php echo esc_attr( get_the_title() ); ?>">
 			</div>
+			<?php endif; ?>
 			<div class="p-post__wrap">
 				<?php the_content(); ?>
 			</div>
@@ -34,15 +36,11 @@
 					<!-- 同カテゴリーの一覧へ -->
 					<li class="p-postPagination__link p-postPagination__link-archive">
 						<?php
-						$category      = get_the_category();
-						$blog_top_id   = (int) get_option( 'page_for_posts' );
-						if ( ! empty( $category ) && ! is_wp_error( $category ) ) {
-							$archive_link = get_category_link( $category[0]->cat_ID );
-						} elseif ( $blog_top_id ) {
-							$archive_link = get_permalink( $blog_top_id );
-						} else {
-							$archive_link = home_url( '/' );
-						}
+						// カテゴリーアーカイブ（/category/news/）はテーマ側の致命的エラーで
+						// 500を返すため、ブログトップ（home.php）へ送る。
+						// アーカイブテンプレートを修正したら元の分岐に戻してよい。
+						$blog_top_id  = (int) get_option( 'page_for_posts' );
+						$archive_link = $blog_top_id ? get_permalink( $blog_top_id ) : home_url( '/' );
 						?>
 						<a class="p-postPagination__link" href="<?php echo esc_url($archive_link); ?>"><span>一覧へ戻る</span></a>
 					</li>
