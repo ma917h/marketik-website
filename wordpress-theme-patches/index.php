@@ -69,10 +69,14 @@ if ( is_category() ) {
 
 		<div class="p-worksArchive__grid">
 			<?php
-			$blog_delays = [ '', 'fadeup--d1', 'fadeup--d2' ];
-			$blog_i      = 0;
+			// アイキャッチ未設定時のフォールバック。
+			// 制作実績用の dummy-works.png はブログと無関係な街並みの写真なので、
+			// ブランドのOGP画像を使う。
+			$blog_placeholder = content_url( '/uploads/2026/09/ogp-b.png' );
+			$blog_delays      = [ '', 'fadeup--d1', 'fadeup--d2' ];
+			$blog_i           = 0;
 			if ( have_posts() ) : while ( have_posts() ) : the_post();
-				$thumb_url  = get_the_post_thumbnail_url( get_the_ID(), 'large' );
+				$thumb_url  = get_the_post_thumbnail_url( get_the_ID(), 'large' ) ?: $blog_placeholder;
 				$cats       = get_the_category();
 				$cat_name   = ( ! empty( $cats ) && ! is_wp_error( $cats ) ) ? $cats[0]->name : '';
 				$blog_delay = $blog_delays[ $blog_i % 3 ];
@@ -80,13 +84,11 @@ if ( is_category() ) {
 			?>
 			<article class="p-worksArchive__card fadeup <?php echo esc_attr( $blog_delay ); ?>">
 				<a href="<?php the_permalink(); ?>" class="p-worksArchive__cardLink">
-					<?php if ( $thumb_url ) : ?>
 					<div class="p-worksArchive__cardImgWrap">
 						<img src="<?php echo esc_url( $thumb_url ); ?>"
 						     alt="<?php echo esc_attr( get_the_title() ); ?>"
 						     loading="lazy">
 					</div>
-					<?php endif; ?>
 					<div class="p-worksArchive__cardBody">
 						<div class="p-worksArchive__cardMeta">
 							<span class="p-worksArchive__cardClient"><?php echo esc_html( get_the_date( 'Y.m.d' ) ); ?></span>

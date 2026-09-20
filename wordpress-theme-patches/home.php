@@ -46,10 +46,14 @@
 
 		<div class="p-worksArchive__grid">
 			<?php
-			$blog_delays = [ '', 'fadeup--d1', 'fadeup--d2' ];
-			$blog_i      = 0;
+			// アイキャッチ未設定時のフォールバック。
+			// 制作実績用の dummy-works.png はブログと無関係な街並みの写真なので、
+			// ブランドのOGP画像を使う。
+			$blog_placeholder = content_url( '/uploads/2026/09/ogp-b.png' );
+			$blog_delays      = [ '', 'fadeup--d1', 'fadeup--d2' ];
+			$blog_i           = 0;
 			if ( have_posts() ) : while ( have_posts() ) : the_post();
-				$thumb_url  = get_the_post_thumbnail_url( get_the_ID(), 'large' ) ?: get_template_directory_uri() . '/assets/images/dummy-works.png';
+				$thumb_url  = get_the_post_thumbnail_url( get_the_ID(), 'large' ) ?: $blog_placeholder;
 				$cats       = get_the_category();
 				$cat_name   = ( ! empty( $cats ) && ! is_wp_error( $cats ) ) ? $cats[0]->name : '';
 				$blog_delay = $blog_delays[ $blog_i % 3 ];
