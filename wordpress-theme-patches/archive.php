@@ -1,6 +1,6 @@
 <?php
 /**
- * アーカイブ（カテゴリー／タグ／著者／日付）
+ * アーカイブ（カテゴリー／タグ／著者／日付／カスタム投稿タイプ）
  *
  * 旧版は wp_pagenavi() だけを呼んでいたが、WP-PageNavi プラグインが
  * 入っていないため Call to undefined function で HTTP 500 になっていた。
@@ -8,6 +8,99 @@
  * home.php と同じマークアップに揃え、ページ送りはコア関数を使う。
  */
 get_header();
+
+// archive.php と index.php の両方に同じ内容を置いているため、
+// どちらが読まれても二重定義にならないようガードする。
+if ( ! function_exists( 'marketik_archive_card_image' ) ) :
+
+	/**
+	 * カードに出す画像を決める。
+	 *
+	 * メンバー等のCPTは顔写真をアイキャッチではなくACFの画像フィールドに
+	 * 持っているため、アイキャッチだけを見るとロゴのプレースホルダに
+	 * 化けてしまう。次の順で探す。
+	 *   1. アイキャッチ
+	 *   2. ACFの画像フィールド（フィールド名に依存しない）
+	 *   3. 投稿に添付された画像
+	 *   4. プレースホルダ
+	 *
+	 * @param int    $post_id     対象の投稿ID
+	 * @param string $placeholder 全て見つからなかったときのURL
+	 * @return string 画像URL
+	 */
+	function marketik_archive_card_image( $post_id, $placeholder ) {
+
+		// 1. アイキャッチ
+		$url = get_the_post_thumbnail_url( $post_id, 'large' );
+		if ( $url ) {
+			return $url;
+		}
+
+		// 2. ACFの画像フィールド
+		if ( function_exists( 'get_fields' ) ) {
+			$fields = get_fields( $post_id );
+			if ( is_array( $fields ) ) {
+				foreach ( $fields as $value ) {
+					$url = marketik_image_url_from_value( $value );
+					if ( $url ) {
+						return $url;
+					}
+				}
+			}
+		}
+
+		// 3. 投稿に添付された画像の1枚目
+		$attached = get_attached_media( 'image', $post_id );
+		if ( ! empty( $attached ) ) {
+			$first = array_shift( $attached );
+			$url   = wp_get_attachment_image_url( $first->ID, 'large' );
+			if ( $url ) {
+				return $url;
+			}
+		}
+
+		// 4. プレースホルダ
+		return $placeholder;
+	}
+
+	/**
+	 * ACFのフィールド値から画像URLを取り出す。
+	 * 返り値の形式（配列／ID／URL）が設定によって変わるため3通りを見る。
+	 * リンクフィールドも 'url' を持つので、画像かどうかを mime_type で判定する。
+	 *
+	 * @param mixed $value ACFフィールドの値
+	 * @return string 画像URLまたは空文字
+	 */
+	function marketik_image_url_from_value( $value ) {
+
+		// 返り値「配列」形式
+		if ( is_array( $value ) ) {
+			$is_image = ( ! empty( $value['mime_type'] ) && 0 === strpos( $value['mime_type'], 'image/' ) )
+				|| ! empty( $value['sizes'] );
+			if ( $is_image && ! empty( $value['url'] ) ) {
+				return $value['url'];
+			}
+			// ギャラリー等、画像の配列だった場合は先頭を見る
+			if ( ! empty( $value[0] ) ) {
+				return marketik_image_url_from_value( $value[0] );
+			}
+			return '';
+		}
+
+		// 返り値「ID」形式
+		if ( is_numeric( $value ) && (int) $value > 0 && wp_attachment_is_image( (int) $value ) ) {
+			return (string) wp_get_attachment_image_url( (int) $value, 'large' );
+		}
+
+		// 返り値「URL」形式
+		if ( is_string( $value ) && preg_match( '#^https?://.+\.(jpe?g|png|gif|webp|avif)(\?.*)?$#i', $value ) ) {
+			return $value;
+		}
+
+		return '';
+	}
+
+endif;
 
 // 投稿（ブログ）のアーカイブか、カスタム投稿タイプのアーカイブかを判定する。
 // メンバー等のCPTがここに流れてきたとき「Blog / 記事一覧」と誤表示しないため。
@@ -82,16 +175,24 @@ $archive_text  = $is_blog ? '映像制作・SNS運用・マーケティングに
 
 		<div class="p-worksArchive__grid">
 			<?php
-			// アイキャッチ未設定時のフォールバック。
+			// 画像が1枚も見つからなかったときのフォールバック。
 			// 制作実績用の dummy-works.png はブログと無関係な街並みの写真なので、
 			// ブランドのOGP画像を使う。
 			$blog_placeholder = content_url( '/uploads/2026/09/ogp-b.png' );
 			$blog_delays      = [ '', 'fadeup--d1', 'fadeup--d2' ];
 			$blog_i           = 0;
 			if ( have_posts() ) : while ( have_posts() ) : the_post();
-				$thumb_url  = get_the_post_thumbnail_url( get_the_ID(), 'large' ) ?: $blog_placeholder;
-				$cats       = get_the_category();
-				$cat_name   = ( ! empty( $cats ) && ! is_wp_error( $cats ) ) ? $cats[0]->name : '';
+				$thumb_url = marketik_archive_card_image( get_the_ID(), $blog_placeholder );
+
+				// 日付とカテゴリはブログ記事のためのもの。
+				// メンバー一覧に投稿日が出ても意味が無いので出さない。
+				$meta_date = $is_blog ? get_the_date( 'Y.m.d' ) : '';
+				$cat_name  = '';
+				if ( $is_blog ) {
+					$cats     = get_the_category();
+					$cat_name = ( ! empty( $cats ) && ! is_wp_error( $cats ) ) ? $cats[0]->name : '';
+				}
+
 				$blog_delay = $blog_delays[ $blog_i % 3 ];
 				$blog_i++;
 			?>
@@ -103,18 +204,22 @@ $archive_text  = $is_blog ? '映像制作・SNS運用・マーケティングに
 						     loading="lazy">
 					</div>
 					<div class="p-worksArchive__cardBody">
+						<?php if ( $meta_date || $cat_name ) : ?>
 						<div class="p-worksArchive__cardMeta">
-							<span class="p-worksArchive__cardClient"><?php echo esc_html( get_the_date( 'Y.m.d' ) ); ?></span>
+							<?php if ( $meta_date ) : ?>
+							<span class="p-worksArchive__cardClient"><?php echo esc_html( $meta_date ); ?></span>
+							<?php endif; ?>
 							<?php if ( $cat_name ) : ?>
 							<span class="p-worksArchive__chip"><?php echo esc_html( $cat_name ); ?></span>
 							<?php endif; ?>
 						</div>
+						<?php endif; ?>
 						<p class="p-worksArchive__cardTitle"><?php the_title(); ?></p>
 					</div>
 				</a>
 			</article>
 			<?php endwhile; else : ?>
-			<p class="p-worksArchive__empty">記事がまだありません。</p>
+			<p class="p-worksArchive__empty"><?php echo esc_html( $is_blog ? '記事がまだありません。' : '該当する項目が見つかりませんでした。' ); ?></p>
 			<?php endif; ?>
 		</div>
 
