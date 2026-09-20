@@ -67,6 +67,12 @@ def load_config():
                 f"       {CONFIG_FILE} に KEY=VALUE 形式で書くか、環境変数で渡してください。"
             )
     cfg["WP_URL"] = cfg["WP_URL"].rstrip("/")
+    if not cfg["WP_URL"].startswith("https://"):
+        die(
+            f"WP_URL が『{cfg['WP_URL']}』になっています。\n"
+            "       http:// だとアプリケーションパスワードが平文で流れます。\n"
+            "       https:// に直してください。"
+        )
     return cfg
 
 
@@ -105,6 +111,22 @@ def check_slug(slug):
         die(f"slug『{slug}』は固定ページ等と衝突します。別の名前にしてください。")
     if slug.isdigit():
         die(f"slug『{slug}』は数字のみです。年月アーカイブと衝突するため避けてください。")
+
+
+def check_slug_unused(cfg, slug):
+    """同じslugの公開記事が既にないか確認する。
+
+    WordPressは下書きの段階ではスラッグの重複を調整しない。公開した瞬間に
+    -2 が付くため、スクリプトが表示する「公開後URL」と実際のURLがズレる。
+    """
+    found = request(cfg, "GET", "posts", query={"slug": slug})
+    if found:
+        die(
+            f"slug『{slug}』は既に公開済みの記事で使われています"
+            f"（投稿ID {found[0].get('id')}）。\n"
+            "       このまま進めると、公開時に -2 が付いてURLがずれます。\n"
+            "       別のslugを指定してください。"
+        )
 
 
 def request(cfg, method, path, payload=None, query=None):
@@ -155,6 +177,7 @@ def main():
     cfg = load_config()
     meta, body = parse_article(sys.argv[1])
     check_slug(meta.get("slug", ""))
+    check_slug_unused(cfg, meta["slug"])
 
     payload = {
         "title": meta["title"],

@@ -328,11 +328,60 @@ WordPress REST API を模したローカルサーバーを立てて実際に通�
   カテゴリ / frontmatter不正 / 本文空 / 認証失敗401 / 接続不可
   — すべて意図したメッセージで停止する
 
-### 未検証（次にやること）
+### 本番環境での検証結果（2026-09-20）
 
-- **AIOSEO のメタディスクリプションをREST API経由で書き込めるか。**
-  AIOSEO はメタ情報を独自テーブルに保持するため、標準の posts エンドポイント
-  では設定できない可能性が高い。AIOSEO独自のRESTエンドポイントを実地検証する。
-  当面はメタディスクリプションを管理画面で手入力する運用で回す
-- アイキャッチ画像の設定（寄稿者権限ではメディアをアップロードできない。
-  必要になったら投稿者権限への変更を検討する）
+marketik.jp に対して実際に実行して確認した内容。
+
+#### 連携ユーザーの権限（`GET /wp/v2/users/me?context=edit`）
+
+| ケーパビリティ | 状態 |
+|---|---|
+| `edit_posts` | あり |
+| `publish_posts` | **なし**（安全弁として意図どおり） |
+| `upload_files` | **なし** |
+| `edit_published_posts` | なし |
+| `aioseo_page_analysis` | あり |
+| `aioseo_page_general_settings` | あり |
+
+#### AIOSEO はREST API経由で設定できる
+
+**「標準の posts エンドポイントでは設定できない」という当初の想定は誤りだった。**
+AIOSEO は独自の名前空間 `aioseo/v1` を公開しており、寄稿者権限のまま書き込める。
+
+```
+POST /wp-json/aioseo/v1/post
+{"id": 161, "postId": 161, "title": "SEOタイトル", "description": "メタ説明"}
+→ {"success": true, "posts": 161}
+```
+
+投稿160・161の両方で成功し、投稿一覧の「AIOSEO 詳細」列に反映されることを確認済み。
+**メタディスクリプションの手入力は不要。**
+
+注意点：
+
+- 書き込みは成功するが、`GET /aioseo/v1/post` から保存値を読み出す方法は未確立。
+  反映確認は管理画面か投稿一覧の「AIOSEO 詳細」列で行う
+- `_aioseo_*` は `wp/v2/posts` の `meta` には現れない（独自テーブル管理のため）
+
+#### 本文HTMLは寄稿者権限でも削られない
+
+`unfiltered_html` を持たないため kses が適用されるが、記事テンプレートが推奨する
+タグ（`p` `h2` `h3` `ul` `li` `strong` `a`）は全て通過した。
+外部リンクの `target="_blank"` `rel="noopener"` も残る。
+
+### できないこと・積み残し
+
+- **アイキャッチ画像は設定できない。** `upload_files` が無いため `POST /wp/v2/media`
+  が使えない。画像は管理画面で手動アップロードする。
+  自動化するなら投稿者権限への変更ではなく、寄稿者に `upload_files` だけを追加する：
+
+  ```php
+  get_role('contributor')->add_cap('upload_files');
+  ```
+
+  投稿者権限は `publish_posts` を含むため、二重の安全弁が崩れる
+- **slug の重複チェックがない。** 下書き段階では WordPress がスラッグを調整しない
+  （`wp_unique_post_slug` が draft を除外する）ため、同じslugの既存記事があると
+  公開時に `-2` が付き、スクリプトが表示する「公開後URL」とズレる
+- **`WP_URL` が https であることを強制していない。** http を書くとアプリケーション
+  パスワードが平文で流れる
