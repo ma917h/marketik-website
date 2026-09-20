@@ -9,6 +9,10 @@
  */
 get_header();
 
+// 投稿（ブログ）のアーカイブか、カスタム投稿タイプのアーカイブかを判定する。
+// メンバー等のCPTがここに流れてきたとき「Blog / 記事一覧」と誤表示しないため。
+$is_blog = ! is_post_type_archive();
+
 if ( is_category() ) {
 	$archive_heading = single_cat_title( '', false );
 } elseif ( is_tag() ) {
@@ -18,17 +22,23 @@ if ( is_category() ) {
 	$archive_heading = ( $queried && ! empty( $queried->display_name ) ) ? $queried->display_name : '記事一覧';
 } elseif ( is_date() ) {
 	$archive_heading = get_the_date( 'Y年n月' );
+} elseif ( is_post_type_archive() ) {
+	$pt              = get_queried_object();
+	$archive_heading = ( $pt && ! empty( $pt->labels->name ) ) ? $pt->labels->name : '一覧';
 } else {
 	$archive_heading = '記事一覧';
 }
+
+$archive_label = $is_blog ? 'Blog' : '';
+$archive_text  = $is_blog ? '映像制作・SNS運用・マーケティングに関する情報を発信しています。' : '';
 ?>
 
 <!-- FV -->
 <section class="p-worksArchive-fv">
 	<div class="p-worksArchive-fv__bg">
-		<span class="p-worksArchive-fv__label">Blog</span>
+		<?php if ( $archive_label ) : ?><span class="p-worksArchive-fv__label"><?php echo esc_html( $archive_label ); ?></span><?php endif; ?>
 		<h1 class="p-worksArchive-fv__heading"><?php echo esc_html( $archive_heading ); ?></h1>
-		<p class="p-worksArchive-fv__text">映像制作・SNS運用・マーケティングに関する情報を発信しています。</p>
+		<?php if ( $archive_text ) : ?><p class="p-worksArchive-fv__text"><?php echo esc_html( $archive_text ); ?></p><?php endif; ?>
 	</div>
 </section>
 
@@ -39,9 +49,10 @@ if ( is_category() ) {
 	<!-- ヘッダー行 -->
 	<div class="p-worksArchive__headRow fadeup">
 		<div class="p-worksArchive__titleBlock">
-			<span class="p-worksArchive__titleLabel">Blog</span>
-			<h2 class="p-worksArchive__heading">記事一覧</h2>
+			<?php if ( $archive_label ) : ?><span class="p-worksArchive__titleLabel"><?php echo esc_html( $archive_label ); ?></span><?php endif; ?>
+			<h2 class="p-worksArchive__heading"><?php echo esc_html( $is_blog ? '記事一覧' : $archive_heading ); ?></h2>
 		</div>
+		<?php if ( $is_blog ) : ?>
 		<div class="p-worksArchive__filterRow">
 			<?php
 			$blog_cats    = get_categories( [ 'hide_empty' => true ] );
@@ -60,6 +71,7 @@ if ( is_category() ) {
 			</a>
 			<?php endforeach; endif; ?>
 		</div>
+		<?php endif; ?>
 	</div>
 
 	<!-- 区切り線 -->
