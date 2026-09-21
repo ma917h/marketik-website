@@ -2,7 +2,8 @@
 """
 marketik.jp へ記事を「下書き」で投稿する。
 
-  python3 wp-draft.py 記事.md
+  python3 wp-draft.py 記事.md     記事を下書き投稿する
+  python3 wp-draft.py --check     接続と権限だけ確認する（何も投稿しない）
 
 記事ファイルの書式（先頭の --- で囲んだ部分がメタ情報）:
 
@@ -170,11 +171,61 @@ def resolve_category(cfg, name):
     die(f"カテゴリ『{name}』が見つかりません。候補: {names}")
 
 
+def check_connection(cfg):
+    """接続・認証・権限・カテゴリを確認する。記事は一切作らない。
+
+    初期セットアップの動作確認用。テスト記事を作って消す手間を無くし、
+    権限が強すぎる場合に気付けるようにする。
+    """
+    me = request(cfg, "GET", "users/me", query={"context": "edit"})
+    roles = me.get("roles") or []
+
+    print("\n接続できました。")
+    print(f"  接続先   : {cfg['WP_URL']}")
+    print(f"  ユーザー : {me.get('name') or '(表示名なし)'} （{me.get('slug') or cfg['WP_USER']}）")
+
+    if roles:
+        label = {
+            "administrator": "管理者",
+            "editor": "編集者",
+            "author": "投稿者",
+            "contributor": "寄稿者",
+            "subscriber": "購読者",
+        }
+        print(f"  権限     : {'、'.join(label.get(r, r) for r in roles)}")
+    else:
+        print("  権限     : 取得できませんでした（投稿には支障ありません）")
+
+    cats = request(cfg, "GET", "categories", query={"per_page": 100})
+    names = [c.get("name", "") for c in cats]
+    print(f"  カテゴリ : {' / '.join(names) if names else '（未作成）'}")
+    print("             ↑ 記事の category: はこの名前と完全一致させてください")
+
+    # 公開できてしまう権限なら警告する。パスワード漏洩時の被害範囲が変わる。
+    strong = [r for r in roles if r in ("administrator", "editor", "author")]
+    if strong:
+        print(
+            "\n  [注意] このユーザーは記事を公開できる権限を持っています。"
+            "\n         アプリケーションパスワードが漏れると、そのまま悪用されます。"
+            "\n         記事投稿用には寄稿者権限の専用ユーザーを使ってください。"
+        )
+    elif "contributor" in roles:
+        print("\n  寄稿者権限です。公開はできません（意図どおり）。")
+
+    print("\nセットアップは完了しています。\n")
+
+
 def main():
     if len(sys.argv) != 2:
-        die("使い方: python3 wp-draft.py 記事.md")
+        die("使い方: python3 wp-draft.py 記事.md\n"
+            "             python3 wp-draft.py --check")
 
     cfg = load_config()
+
+    if sys.argv[1] in ("--check", "-c"):
+        check_connection(cfg)
+        return
+
     meta, body = parse_article(sys.argv[1])
     check_slug(meta.get("slug", ""))
     check_slug_unused(cfg, meta["slug"])
