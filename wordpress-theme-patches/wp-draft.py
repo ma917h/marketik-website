@@ -60,6 +60,11 @@ def load_config():
                 continue
             k, v = line.split("=", 1)
             cfg[k.strip()] = v.strip()
+    # WordPressのユーザー名は sanitize_user() で連続する空白が1つに詰められる。
+    # 設定ファイル側に空白が2つ入っていても、見た目では気付けないまま
+    # 401 になるだけなので、保存されている形に合わせて正規化する。
+    if cfg.get("WP_USER"):
+        cfg["WP_USER"] = re.sub(r"\s+", " ", cfg["WP_USER"])
     for key in ("WP_URL", "WP_USER", "WP_APP_PASSWORD"):
         cfg[key] = os.environ.get(key) or cfg.get(key, "")
         if not cfg[key]:
